@@ -30,4 +30,4 @@ Reasonable security measures are implemented to protect user data.
 This policy may be updated for academic or compliance purposes.
 
 ## Contact
-Email:ksglrohith@gmail.com
+Email: ksglrohith@gmail.com
