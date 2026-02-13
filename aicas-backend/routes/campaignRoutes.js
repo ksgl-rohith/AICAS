@@ -5,7 +5,9 @@ const {
     getCampaigns
 } = require("../controllers/campaignController")
 
-router.post("/create", createCampaign);
-router.get("/", getCampaigns);
+const {protect} = require("../middleware/authMiddleware");
+
+router.post("/create", protect, createCampaign);
+router.get("/", protect, getCampaigns);
 
 module.exports = router;

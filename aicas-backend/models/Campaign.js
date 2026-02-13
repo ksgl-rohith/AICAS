@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 
 const campaignSchema = new mongoose.Schema(
     {
-        campaignName: {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },campaignName: {
             type: String,
             required: true
         },
