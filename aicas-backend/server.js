@@ -1,8 +1,14 @@
-const http = require('http');
+const dotenv = require("dotenv");
+const app = require("./app");
+const connectDB = require("./config/db");
 
-const server = http.createServer((req, res) => {
-    res.write('Hello World!');
-    res.end();
-}
-);
-server.listen(3000);
+
+dotenv.config();
+
+connectDB();
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`AICAS Backend running on port ${PORT}`);
+});
