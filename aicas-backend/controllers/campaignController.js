@@ -2,7 +2,10 @@ const Campaign = require("../models/Campaign");
 
 exports.createCampaign = async (req,res) => {
     try {
-        const campaign = await Campaign.create(req.body);
+        const campaign = await Campaign.create({
+            ...req.body,
+            user: req.user
+            });
         res.status(201).json({
             succes: true,
             data: campaign
