@@ -1,10 +1,19 @@
 const Campaign = require("../models/Campaign");
+const getDefaultSchedule = require("../utils/defaultSchedule")
 
 // Create Campaign
 exports.createCampaign = async (req, res) => {
   try {
+
+    const schedule =
+      req.body.schedule && Object.keys(req.body.schedule).length > 0
+      ? req.body.schedule
+      : getDefaultSchedule(req.body.platforms);
+    console.log("Platforms:", req.body.platforms);
+
     const campaign = await Campaign.create({
       ...req.body,
+      schedule,
       user: req.user
     });
 

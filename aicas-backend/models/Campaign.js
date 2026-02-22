@@ -20,13 +20,14 @@ const campaignSchema = new mongoose.Schema(
             required: true
         },
         frequency: {
-            type: String,
+            type: [String],
             enum: ["daily","weekly", "monthly"],
-            default: "daily"
+            default: ["daily"]
         },
         platforms: {
             type: [String],
-            required: true
+            enum: ["linkedin","telegram","facebook","discord"],
+            default: ["linkedin"]
         },
         contentTypes: {
             type: [String],
@@ -44,7 +45,16 @@ const campaignSchema = new mongoose.Schema(
             type: String,
             enum: ["ACTIVE", "PAUSED", "COMPLETED"],
             default: "ACTIVE"
-        }
+        },
+        schedule: {
+            monday: { hour: Number, minute: Number },
+            tuesday: { hour: Number, minute: Number },
+            wednesday: { hour: Number, minute: Number },
+            thursday: { hour: Number, minute: Number },
+            friday: { hour: Number, minute: Number },
+            saturday: { hour: Number, minute: Number },
+            sunday: { hour: Number, minute: Number }
+},
     },
     { timestamps: true }
 );
