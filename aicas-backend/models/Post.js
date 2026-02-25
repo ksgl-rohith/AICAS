@@ -23,6 +23,13 @@ const postSchema = new mongoose.Schema(
             type: String,
             enum: ["GENERATED","POSTED","FAILED"],
             default: "GENERATED"
+        },
+        retryCount: {
+            type: Number,
+            default: 0
+        },
+        lastAttemptAt: {
+            type: Date
         }
     },
     {timestamps: true}
