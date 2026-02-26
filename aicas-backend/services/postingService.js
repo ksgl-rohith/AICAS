@@ -3,23 +3,22 @@ const postToLinkedIn = require("../integrations/linkedin");
 const sendDiscordPost = require("../integrations/discord");
 const postToFacebook = require("../integrations/facebook");
 
-const postToPlatforms = async (campaign, content) => {
+const postToPlatforms = async (campaign, post) => {
   const results = [];
 
-  if (campaign.platforms.includes("telegram")) {
-    results.push(await sendTelegramPost(content));
-  }
+  for (let platform of campaign.platforms) {
 
-  if (campaign.platforms.includes("linkedin")) {
-    results.push(await postToLinkedIn(content));
-  }
+    if (platform === "telegram")
+      results.push(await sendTelegramPost(post));
 
-  if (campaign.platforms.includes("discord")) {
-    results.push(await sendDiscordPost(content));
-  }
+    if (platform === "linkedin")
+      results.push(await postToLinkedIn(post));
 
-  if (campaign.platforms.includes("facebook")) {
-    results.push(await postToFacebook(content));
+    if (platform === "discord")
+      results.push(await sendDiscordPost(post));
+
+    if (platform === "facebook")
+      results.push(await postToFacebook(post));
   }
 
   return results.length > 0 && results.every(r => r.success);

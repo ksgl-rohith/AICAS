@@ -15,10 +15,15 @@ const postSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        content: {
-            type: String,
-            required: true
+        contentTypes: {
+            type: [String],
+            default: ["text"]
+            
         },
+        media: {
+            imagePath: String,
+            videoPath: String
+            },
         status: {
             type: String,
             enum: ["GENERATED","POSTED","FAILED"],
@@ -31,6 +36,7 @@ const postSchema = new mongoose.Schema(
         lastAttemptAt: {
             type: Date
         }
+        
     },
     {timestamps: true}
 
