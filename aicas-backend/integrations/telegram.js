@@ -9,9 +9,9 @@ const sendTelegramPost = async (post) => {
   console.log("POST MEDIA:", post.media);
 try {
 
-    if (!post) {
-      console.log("Post object is undefined");
-      return { success: false };
+    if (!post.content && !post.media?.imagePath && !post.media?.videoPath) {
+        console.log("Nothing to send");
+        return { success: false };
     }
 
     //  VIDEO FIRST
@@ -41,37 +41,62 @@ try {
       console.log("Telegram video success:", response.data);
       return { success: true };
     }
+        const extractTitleAndBody = (text) => {
+        const lines = text.split("\n").filter(l => l.trim() !== "");
 
-    // IMAGE
-    if (post.media?.imagePath) {
+        let title = "Daily Post";
+        let body = text;
 
-      const absoluteImagePath = path.resolve(post.media.imagePath);
-
-      console.log("Absolute image path:", absoluteImagePath);
-      console.log("File exists:", fs.existsSync(absoluteImagePath));
-
-      if (!fs.existsSync(absoluteImagePath)) {
-        console.log("Image file not found");
-        return { success: false };
-      }
-
-      const form = new FormData();
-      form.append("chat_id", process.env.TELEGRAM_CHAT_ID);
-      form.append("caption", post.content);
-      form.append("photo", fs.createReadStream(absoluteImagePath));
-
-      const response = await axios.post(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`,
-        form,
-        {
-          headers: form.getHeaders(),
-          maxBodyLength: Infinity
+        if (lines[0].toLowerCase().includes("title:")) {
+            title = lines[0].replace(/title:/i, "").trim();
+            body = text.replace(lines[0], "").trim();
         }
-      );
 
-      console.log("Telegram image success:", response.data);
-      return { success: true };
-    }
+        return { title, body };
+        };
+    // IMAGE
+        if (post.media?.imagePath) {
+
+        const absoluteImagePath = path.resolve(post.media.imagePath);
+
+        if (!fs.existsSync(absoluteImagePath)) {
+            console.log("Image file not found");
+            return { success: false };
+        }
+
+        const { title, body } = extractTitleAndBody(post.content);
+
+        const caption = title.length > 1024
+            ? title.substring(0, 1020) + "..."
+            : title;
+
+        const form = new FormData();
+        form.append("chat_id", process.env.TELEGRAM_CHAT_ID);
+        form.append("caption", caption);
+        form.append("photo", fs.createReadStream(absoluteImagePath));
+
+        await axios.post(
+            `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`,
+            form,
+            {
+            headers: form.getHeaders(),
+            maxBodyLength: Infinity
+            }
+        );
+
+        // Send body separately
+        if (body.length > 0) {
+            await axios.post(
+            `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+            {
+                chat_id: process.env.TELEGRAM_CHAT_ID,
+                text: body
+            }
+            );
+        }
+
+        return { success: true };
+        }
 
     // TEXT FALLBACK
     const response = await axios.post(

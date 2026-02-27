@@ -9,6 +9,7 @@ const postToPlatforms = require("../services/postingService");
 
 const runCampaigns = async () => {
   console.log("#runCampaigns executing...");
+  
   const now = new Date();
 
   const currentDayName = now
@@ -97,8 +98,8 @@ const runCampaigns = async () => {
 
     await newPost.save();
     await campaign.save();
-
-    console.log(`✅ Completed processing for ${campaign._id}`);
+    console.log("Campaign contentTypes:", campaign.contentTypes);
+    console.log(`Completed processing for ${campaign._id}`);
   }
 };
 

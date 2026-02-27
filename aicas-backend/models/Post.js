@@ -15,10 +15,9 @@ const postSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        contentTypes: {
-            type: [String],
-            default: ["text"]
-            
+        content: {
+            type: String,
+            required: true   
         },
         media: {
             imagePath: String,
