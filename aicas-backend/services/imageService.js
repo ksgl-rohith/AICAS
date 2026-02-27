@@ -40,8 +40,8 @@ const generateImage = async (text, day) => {
 
   // Body text
   ctx.font = "40px Arial";
-  wrapText(ctx, text.substring(0, 250), 80, 300, 920, 60);
-
+  const firstLine = text.split("\n")[0].replace(/title:/i, "").trim();
+  wrapText(ctx, firstLine, 80, 500, 920, 80);
   const filePath = path.join(outputDir, `image_day_${day}.png`);
 
   fs.writeFileSync(filePath, canvas.toBuffer("image/png"));

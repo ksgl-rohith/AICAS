@@ -1,32 +1,38 @@
 const Post = require("../models/Post");
-const Campaign = require("../models/Campaign");
 const postToPlatforms = require("../services/postingService");
 
 const retryFailedPosts = async () => {
-    console.log("Checking for failed posts...");
 
-    const failedPosts = await Post.find({
-        status: "FAILED",
-        retryCount: { $lt: 3 }
-    }).populate("campaign");
+  console.log("Checking for failed posts...");
 
-    for (let post of failedPosts) {
-        const campaign = post.campaign;
+  const failedPosts = await Post.find({
+    status: "FAILED",
+    retryCount: { $lt: 3 }
+  }).populate("campaign");
 
-        const success = await postToPlatforms(campaign, post.content);
+  for (let post of failedPosts) {
 
-        post.retryCount += 1;
-        post.lastAttemptAt = new Date();
+    // 🔥 SAFE CHECKS
+    if (!post) continue;
+    if (!post.campaign) continue;
+    if (!post.content) continue;
 
-        if (success) {
-            post.status = "POSTED";
-            console.log("Retry successful");
-        } else {
-            console.log("Retry failed");
-        }
+    try {
+      const success = await postToPlatforms(post.campaign, post);
 
-        await post.save();
+      post.retryCount += 1;
+      post.lastAttemptAt = new Date();
+
+      if (success) {
+        post.status = "POSTED";
+      }
+
+      await post.save();
+
+    } catch (err) {
+      console.log("Retry error:", err.message);
     }
+  }
 };
 
 module.exports = retryFailedPosts;
