@@ -1,10 +1,13 @@
 const Campaign = require("../models/Campaign");
 const getDefaultSchedule = require("../utils/defaultSchedule")
+const { generateDailyContent } = require("../services/contentService");
+const Post = require("../models/Post");
+const generateImage = require("../services/imageService");
+const generateVideo = require("../services/videoService");
 
 // Create Campaign
 exports.createCampaign = async (req, res) => {
   try {
-
     const schedule =
       req.body.schedule && Object.keys(req.body.schedule).length > 0
       ? req.body.schedule
@@ -17,6 +20,31 @@ exports.createCampaign = async (req, res) => {
       user: req.user
     });
 
+    for (let day = 1; day <= campaign.totalDays; day++) {
+
+   const { subtopic, content } =
+      await generateDailyContent(campaign, day);
+
+   let imagePath = null;
+   let videoPath = null;
+
+   if (campaign.contentTypes.includes("image")) {
+      imagePath = await generateImage(content, day);
+   }
+
+   if (campaign.contentTypes.includes("video") && imagePath) {
+      videoPath = await generateVideo(imagePath, day);
+   }
+
+   await Post.create({
+      campaign: campaign._id,
+      dayNumber: day,
+      subtopic,
+      content,
+      media: { imagePath, videoPath },
+      status: "GENERATED"
+   });
+}
     res.status(201).json({
       success: true,
       data: campaign

@@ -3,6 +3,21 @@ const fs = require("fs");
 const FormData = require("form-data");
 const path = require("path");
 
+const MAX_CAPTION_LENGTH = 1000;
+
+const extractCaption = (content) => {
+  if (!content) return "Daily Post";
+
+  const lines = content.split("\n").filter(l => l.trim() !== "");
+
+  let titleLine = lines.find(line =>
+    line.toLowerCase().includes("day")
+  ) || lines[0];
+
+  if (!titleLine) titleLine = "Daily Post";
+
+  return titleLine.substring(0, MAX_CAPTION_LENGTH);
+};
 
 const sendTelegramPost = async (post) => {
   console.log("FULL POST OBJECT:", post);
@@ -26,7 +41,8 @@ try {
 
       const form = new FormData();
       form.append("chat_id", process.env.TELEGRAM_CHAT_ID);
-      form.append("caption", post.content);
+      const caption = extractCaption(post.content);
+        form.append("caption", caption);
       form.append("video", fs.createReadStream(absoluteVideoPath));
 
       const response = await axios.post(
@@ -100,11 +116,11 @@ try {
 
     // TEXT FALLBACK
     const response = await axios.post(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        chat_id: process.env.TELEGRAM_CHAT_ID,
-        text: post.content
-      }
+        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            text: post.content.substring(0, 4096)
+        }
     );
 
     console.log("Telegram text success:", response.data);
