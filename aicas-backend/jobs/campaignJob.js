@@ -39,68 +39,79 @@ const runCampaigns = async () => {
     //   scheduledMinute !== currentMinute
     // ) continue;
 
-    // Prevent duplicate generation
-    const existingPost = await Post.findOne({
-      campaign: campaign._id,
-      dayNumber: campaign.currentDay
-    });
 
-    if (existingPost) continue;
-
-    // Check completion
+    // 1️⃣ Completion check
     if (campaign.currentDay > campaign.totalDays) {
       campaign.status = "COMPLETED";
       await campaign.save();
       continue;
     }
 
-    console.log("Generating content...");
-
-    // 1️⃣ Generate AI Text
-    const { day, subtopic, content } =
-      await generateDailyContent(campaign);
-
-    // 2️⃣ Generate Media
-    let imagePath = null;
-    let videoPath = null;
-
-    if (campaign.contentTypes.includes("image")) {
-      imagePath = await generateImage(content, day);
-    }
-
-    if (campaign.contentTypes.includes("video") && imagePath) {
-      videoPath = await generateVideo(imagePath, day);
-    }
-
-    // 3️⃣ Save Post
-    const newPost = await Post.create({
+    // 2️⃣ Try to find existing post
+    let post = await Post.findOne({
       campaign: campaign._id,
-      dayNumber: day,
-      subtopic,
-      content,
-      media: {
-        imagePath,
-        videoPath
-      },
-      status: "GENERATED"
+      dayNumber: campaign.currentDay
     });
 
-    // 4️⃣ Post to platforms (media-aware)
-    const success = await postToPlatforms(campaign, newPost);
+    // 3️⃣ If post missing → generate it (fallback)
+    if (!post) {
+      console.log("Post missing. Generating for day:", campaign.currentDay);
 
-    // 5️⃣ Update status ONCE
-    if (success) {
-      newPost.status = "POSTED";
-      campaign.currentDay += 1;
-    } else {
-      newPost.status = "FAILED";
+      const { day, subtopic, content } =
+        await generateDailyContent(campaign);
+
+      let imagePath = null;
+      let videoPath = null;
+
+      if (campaign.contentTypes.includes("image")) {
+        imagePath = await generateImage(content, day);
+      }
+
+      if (campaign.contentTypes.includes("video") && imagePath) {
+        videoPath = await generateVideo(imagePath, day);
+      }
+
+      post = await Post.create({
+        campaign: campaign._id,
+        dayNumber: day,
+        subtopic,
+        content,
+        media: { imagePath, videoPath },
+        status: "GENERATED"
+      });
     }
 
-    await newPost.save();
+    // 4️⃣ Skip if already posted
+    if (post.status === "POSTED") {
+      console.log("Already posted. Skipping day:", campaign.currentDay);
+      campaign.currentDay += 1;
+      await campaign.save();
+      continue;
+    }
+
+    console.log("Posting day:", campaign.currentDay);
+
+    // 5️⃣ Post to platforms
+    const success = await postToPlatforms(campaign, post);
+
+    // 6️⃣ Update status
+    if (success) {
+      post.status = "POSTED";
+      campaign.currentDay += 1;
+
+      if (campaign.currentDay > campaign.totalDays) {
+        campaign.status = "COMPLETED";
+      }
+
+    } else {
+      post.status = "FAILED";
+    }
+
+    await post.save();
     await campaign.save();
-    console.log("Campaign contentTypes:", campaign.contentTypes);
+
     console.log(`Completed processing for ${campaign._id}`);
-  }
+}
 };
 
 module.exports = runCampaigns;
