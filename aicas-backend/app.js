@@ -14,10 +14,17 @@ const limiter = rateLimit({
 
 const postRoutes = require("./routes/postRoutes");
 
+const platformRoutes = require("./routes/platformRoutes");
+
+const logRoutes = require("./routes/logRoutes");
+
+
 app.use(cors());
 app.use(express.json());
+app.use("/api/platforms", platformRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/logs", logRoutes);
 app.use(limiter);
 
 app.get("/api/health", (req,res)=>{
