@@ -1,133 +1,112 @@
 const axios = require("axios");
 const fs = require("fs");
-const FormData = require("form-data");
 const path = require("path");
+const FormData = require("form-data");
 
-const MAX_CAPTION_LENGTH = 1000;
+const MAX_CAPTION = 1000;
 
-const extractCaption = (content) => {
+const getCaption = (content) => {
+
   if (!content) return "Daily Post";
 
-  const lines = content.split("\n").filter(l => l.trim() !== "");
+  const firstLine = content.split("\n")[0];
 
-  let titleLine = lines.find(line =>
-    line.toLowerCase().includes("day")
-  ) || lines[0];
-
-  if (!titleLine) titleLine = "Daily Post";
-
-  return titleLine.substring(0, MAX_CAPTION_LENGTH);
+  return firstLine.substring(0, MAX_CAPTION);
 };
 
-const sendTelegramPost = async (post) => {
-  console.log("FULL POST OBJECT:", post);
-  console.log("POST MEDIA:", post.media);
-try {
+const sendTelegramPost = async (post, tokenData) => {
 
-    if (!post.content && !post.media?.imagePath && !post.media?.videoPath) {
-        console.log("Nothing to send");
-        return { success: false };
-    }
+  const BOT_TOKEN = tokenData.accessToken;
+  const CHAT_ID = tokenData.additionalData.chatId;
 
-    //  VIDEO FIRST
+  console.log("BOT TOKEN:", BOT_TOKEN);
+  console.log("CHAT ID:", CHAT_ID);
+  try {
+
+    const caption = getCaption(post.content);
+
+    // VIDEO FIRST
     if (post.media?.videoPath) {
 
-      const absoluteVideoPath = path.resolve(post.media.videoPath);
+      const videoPath = path.resolve(post.media.videoPath);
 
-      if (!fs.existsSync(absoluteVideoPath)) {
-        console.log("Video not found:", absoluteVideoPath);
+      if (!fs.existsSync(videoPath)) {
+        console.log("Video not found");
         return { success: false };
       }
 
       const form = new FormData();
-      form.append("chat_id", process.env.TELEGRAM_CHAT_ID);
-      const caption = extractCaption(post.content);
-        form.append("caption", caption);
-      form.append("video", fs.createReadStream(absoluteVideoPath));
 
-      const response = await axios.post(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendVideo`,
+      form.append("chat_id", CHAT_ID);
+      form.append("caption", caption);
+      form.append("video", fs.createReadStream(videoPath));
+
+      await axios.post(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`,
         form,
+        { headers: form.getHeaders() }
+      );
+
+      // send full text separately
+      await axios.post(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
         {
-          headers: form.getHeaders(),
-          maxBodyLength: Infinity
+          chat_id: CHAT_ID,
+          text: post.content.substring(0, 4096)
         }
       );
 
-      console.log("Telegram video success:", response.data);
       return { success: true };
     }
-        const extractTitleAndBody = (text) => {
-        const lines = text.split("\n").filter(l => l.trim() !== "");
 
-        let title = "Daily Post";
-        let body = text;
-
-        if (lines[0].toLowerCase().includes("title:")) {
-            title = lines[0].replace(/title:/i, "").trim();
-            body = text.replace(lines[0], "").trim();
-        }
-
-        return { title, body };
-        };
     // IMAGE
-        if (post.media?.imagePath) {
+    if (post.media?.imagePath) {
 
-        const absoluteImagePath = path.resolve(post.media.imagePath);
+      const imagePath = path.resolve(post.media.imagePath);
 
-        if (!fs.existsSync(absoluteImagePath)) {
-            console.log("Image file not found");
-            return { success: false };
-        }
+      if (!fs.existsSync(imagePath)) {
+        console.log("Image not found");
+        return { success: false };
+      }
 
-        const { title, body } = extractTitleAndBody(post.content);
+      const form = new FormData();
 
-        const caption = title.length > 1024
-            ? title.substring(0, 1020) + "..."
-            : title;
+      form.append("chat_id", CHAT_ID);
+      form.append("caption", caption);
+      form.append("photo", fs.createReadStream(imagePath));
 
-        const form = new FormData();
-        form.append("chat_id", process.env.TELEGRAM_CHAT_ID);
-        form.append("caption", caption);
-        form.append("photo", fs.createReadStream(absoluteImagePath));
+      await axios.post(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
+        form,
+        { headers: form.getHeaders() }
+      );
 
-        await axios.post(
-            `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`,
-            form,
-            {
-            headers: form.getHeaders(),
-            maxBodyLength: Infinity
-            }
-        );
-
-        // Send body separately
-        if (body.length > 0) {
-            await axios.post(
-            `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-            {
-                chat_id: process.env.TELEGRAM_CHAT_ID,
-                text: body
-            }
-            );
-        }
-
-        return { success: true };
-        }
-
-    // TEXT FALLBACK
-    const response = await axios.post(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      await axios.post(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
         {
-            chat_id: process.env.TELEGRAM_CHAT_ID,
-            text: post.content.substring(0, 4096)
+          chat_id: CHAT_ID,
+          text: post.content.substring(0, 4096)
         }
+      );
+
+      return { success: true };
+    }
+
+    // TEXT
+    await axios.post(
+      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+      {
+        chat_id: CHAT_ID,
+        text: post.content.substring(0, 4096)
+      }
     );
 
-    console.log("Telegram text success:", response.data);
     return { success: true };
 
   } catch (error) {
-    console.error("Telegram error:", error.response?.data || error.message);
+
+    console.log("Telegram error:", error.response?.data || error.message);
+
     return { success: false };
   }
 };

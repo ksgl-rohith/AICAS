@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
-import { login } from "../services/authService";
+import { useNavigate, Link } from "react-router-dom";
+import { register } from "../services/authService";
 
-const Login = () => {
+const Register = () => {
+
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
+    name: "",
     email: "",
     password: "",
   });
@@ -15,10 +16,10 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      await login(form);
-      navigate("/");
+      await register(form);
+      navigate("/login");
     } catch (error) {
-      alert("Login failed");
+      alert("Registration failed");
     }
   };
 
@@ -30,14 +31,23 @@ const Login = () => {
         className="bg-white p-8 rounded-lg shadow-md w-96 space-y-4"
       >
 
-        <h2 className="text-2xl font-bold text-center text-gray-800">
-          AICAS Login
+        <h2 className="text-2xl font-bold text-center text-black">
+          Create Account
         </h2>
+
+        <input
+          type="text"
+          placeholder="Name"
+          className="w-full border p-2 rounded text-black"
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
+        />
 
         <input
           type="email"
           placeholder="Email"
-          className="w-full border border-gray-300 p-2 rounded text-black"
+          className="w-full border p-2 rounded text-black"
           onChange={(e) =>
             setForm({ ...form, email: e.target.value })
           }
@@ -46,31 +56,30 @@ const Login = () => {
         <input
           type="password"
           placeholder="Password"
-          className="w-full border border-gray-300 p-2 rounded text-black"
+          className="w-full border p-2 rounded text-black"
           onChange={(e) =>
             setForm({ ...form, password: e.target.value })
           }
         />
 
-        <button
-          type="submit"
-          className="w-full bg-black text-white p-2 rounded hover:bg-gray-800"
-        >
-          Login
+        <button className="w-full bg-black text-white p-2 rounded">
+          Register
         </button>
+
         <p className="text-sm text-center text-black">
-            Don't have an account?{" "}
-            <Link
-                to="/register"
-                className="text-blue-500"
-            >
-                Register
-            </Link>
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="text-blue-500"
+          >
+            Login
+          </Link>
         </p>
+
       </form>
 
     </div>
   );
 };
 
-export default Login;
+export default Register;
