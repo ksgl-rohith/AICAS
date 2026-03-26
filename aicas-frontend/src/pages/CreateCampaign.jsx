@@ -17,7 +17,8 @@ const CreateCampaign = () => {
     platforms:[],
     contentTypes:[],
     startDate:"",
-    schedule:{}
+    schedule:{},
+    useTrending: false
   });
 
   const handleCheckbox = (field,value)=>{
@@ -198,8 +199,27 @@ onChange={()=>handleCheckbox("contentTypes",type)}
 
 </div>
 
-{/* Frequency */}
+<div >
+  <p className="font-semibold mb-2"> Trend</p>
+  <input
+    type="checkbox"
+    checked={form.useTrending}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        useTrending: e.target.checked
+      })
+    }
+  />
 
+  <label >
+       Use Trending Content
+  </label>
+
+</div>
+
+{/* Frequency */}
+<p className="font-semibold mb-2">Frequency</p>
 <select
 value={form.frequency[0]}
 className="border p-2 rounded"
@@ -211,6 +231,8 @@ onChange={(e)=>setForm({...form,frequency:[e.target.value]})}
 <option value="monthly">Monthly</option>
 
 </select>
+
+
 
 {/* Schedule Mode */}
 

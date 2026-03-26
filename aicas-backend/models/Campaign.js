@@ -54,7 +54,11 @@ const campaignSchema = new mongoose.Schema(
             friday: { hour: Number, minute: Number },
             saturday: { hour: Number, minute: Number },
             sunday: { hour: Number, minute: Number }
-},
+    },
+        useTrending: {
+        type: Boolean,
+        default: false
+        },
     },
     { timestamps: true }
 );

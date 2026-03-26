@@ -1,52 +1,79 @@
 const generateFromLLM = require("./aiService");
+const getLatestNews = require("./newsService");
+exports.generateDailyContent = async (campaign, day) => {
+const useNews = campaign.useTrending || false;
 
-// const generateSubtopic = (topic, day) => {
-//     return `Day ${day}: Advanced insights on ${topic}`;
-// };
+let newsContext = "";
 
-// const generateContent = (topic, subtopic) => {
-//     return `
-//     => ${subtopic}
+if (useNews) {
+  newsContext = await getLatestNews(campaign.topic);
 
-// In today's discussion under ${topic}, we explore key concepts, practical implications, and real-world relevance.
+  // fallback
+  if (!newsContext) {
+    newsContext = "No recent updates found. Generate general informative content.";
+  }
+}
+  const styles = [
+    "educational",
+    "storytelling",
+    "motivational",
+    "tips-based",
+    "question-based",
+    "problem-solution"
+  ];
 
-// Stay tuned for more structured insights as we continue this journey.
-// `;
-// };
+  const getStyle = (day) => styles[day % styles.length];
 
-exports.generateDailyContent = async (campaign) => {
-    const day = campaign.currentDay;
+  const sanitize = (text) => {
+    return text
+      .replace(/Here is.*?:/gi, "")
+      .replace(/["“”]/g, "")
+      .replace(/\*\*/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
 
-    const platformStyle = {
-        linkedin: "Professional, thought-leadership tone.",
-        instagram: "Short, engaging, emoji-friendly.",
-        telegram: "Educational and structured.",
-        discord: "Conversational but informative."
-        };
 
-    const prompt = `
-    You are a professional content strategist.
+  const subtopic = `Day ${day}: ${campaign.topic}`;
 
-    Generate a high-quality social media post.
+ const prompt = `
+You are an AI content creator.
 
-    Campaign Topics: ${campaign.topic}
-    Day Number: ${day}
-    Platform: ${campaign.platforms.join(", ")}
-    Tone: ${platformStyle[campaign.platforms[0]]}
+Generate ONE high-quality social media post.
 
-    Requirements: 
-    - Unique content
-    - Engaging introduction
-    - Structured paragraphs
-    - Professional tone
-    - End with call-to-action
-    - No emojis
+STRICT RULES:
+- Do NOT generate multiple posts
+- Do NOT repeat title
+- Start directly with title
+- Keep it clean and structured
 
-    Generate only the post content.
-    `
-    const content = await generateFromLLM(prompt);
+FORMAT:
+<Title>
+<Content>
 
-    const subtopic = `Day ${day}: ${campaign.topic}`;
+Topic: ${campaign.topic}
+Day: ${day}
+Style: ${getStyle(day)}
 
-    return { day, subtopic, content };
+${useNews ? `Latest News Context:\n${newsContext}` : ""}
+
+Instructions:
+- If news is provided → prioritize recent developments
+- If no news → generate general educational content
+- Make it engaging and informative
+`;
+
+  const rawContent = await generateFromLLM(prompt);
+
+  if (!rawContent) {
+    return {
+      day,
+      subtopic,
+      content: `Day ${day}: ${campaign.topic}\nStay tuned for more updates.`
+    };
+  }
+
+  const content = sanitize(rawContent);
+
+  return { day, subtopic, content };
 };

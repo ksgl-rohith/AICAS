@@ -8,10 +8,30 @@ const generateVideo = require("../services/videoService");
 // Create Campaign
 exports.createCampaign = async (req, res) => {
   try {
-    const schedule =
-      req.body.schedule && Object.keys(req.body.schedule).length > 0
-      ? req.body.schedule
-      : getDefaultSchedule(req.body.platforms);
+    // const schedule =
+    //   req.body.schedule && Object.keys(req.body.schedule).length > 0
+    //   ? req.body.schedule
+    //   : getDefaultSchedule(req.body.platforms);
+    let schedule;
+
+    if (req.body.schedule && Object.keys(req.body.schedule).length > 0) {
+      schedule = req.body.schedule;
+    } else {
+      // SMART SCHEDULING AUTO GENERATION
+      schedule = {};
+
+      const days = [
+        "monday","tuesday","wednesday",
+        "thursday","friday","saturday","sunday"
+      ];
+
+      for (let day of days) {
+        const randomPlatform =
+        req.body.platforms[Math.floor(Math.random() * req.body.platforms.length)];
+        schedule[day] = getBestTime(randomPlatform);
+        }
+    }
+    
     console.log("Platforms:", req.body.platforms);
 
     const campaign = await Campaign.create({

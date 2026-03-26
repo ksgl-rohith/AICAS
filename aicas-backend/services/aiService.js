@@ -18,7 +18,7 @@
 // module.exports = generateFromLLM;
 
 const axios = require("axios");
-
+console.log("API KEY:", process.env.NVIDIA_API_KEY);
 const generateFromLLM = async (prompt) => {
   try {
     const response = await axios.post(

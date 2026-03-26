@@ -17,9 +17,6 @@ const runCampaigns = async () => {
     .toLocaleString("en-US", { weekday: "long" })
     .toLowerCase();
 
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-
   const activeCampaigns = await Campaign.find({
     status: "ACTIVE"
   });
@@ -31,37 +28,25 @@ const runCampaigns = async () => {
     const todaySchedule = campaign.schedule?.[currentDayName];
     if (!todaySchedule) continue;
 
-    const scheduledHour = todaySchedule.hour;
-    const scheduledMinute = todaySchedule.minute;
-
-    // REAL SCHEDULE CHECK 
-    /*
-    if (
-      scheduledHour !== currentHour ||
-      scheduledMinute !== currentMinute
-    ) continue;
-    */
-
-    // Check if campaign completed
+    // ✅ Completion check
     if (campaign.currentDay > campaign.totalDays) {
       campaign.status = "COMPLETED";
       await campaign.save();
       continue;
     }
 
-    //Find today's post
+    // ✅ Get post
     let post = await Post.findOne({
       campaign: campaign._id,
       dayNumber: campaign.currentDay
     });
 
-    //Generate post if missing
+    // ✅ Generate if missing
     if (!post) {
-
-      console.log("Generating content for day:", campaign.currentDay);
+      console.log("No post found. Generating...");
 
       const { day, subtopic, content } =
-        await generateDailyContent(campaign);
+        await generateDailyContent(campaign, campaign.currentDay);
 
       let imagePath = null;
       let videoPath = null;
@@ -82,53 +67,77 @@ const runCampaigns = async () => {
         media: { imagePath, videoPath },
         status: "GENERATED"
       });
-
     }
 
-    //Skip already posted posts
+    // ✅ Safety check
+    if (!post || !post.content) {
+      console.log("Invalid post. Skipping...");
+      continue;
+    }
+
+    // ✅ Skip posted
     if (post.status === "POSTED") {
-
-      console.log("Already posted. Moving to next day.");
-
+      console.log("Already posted. Moving forward...");
       campaign.currentDay += 1;
       await campaign.save();
       continue;
+    }
 
+    // ✅ Retry logic
+    if (post.status === "FAILED") {
+
+      const MAX_RETRIES = 3;
+
+      if (post.retryCount >= MAX_RETRIES) {
+        console.log("Max retries reached. Skipping day.");
+        campaign.currentDay += 1;
+        await campaign.save();
+        continue;
+      }
+
+      const now = new Date();
+      const lastAttempt = post.lastAttemptAt || new Date(0);
+      const diffMinutes = (now - lastAttempt) / (1000 * 60);
+
+      const RETRY_DELAY_MINUTES = 5;
+
+      if (diffMinutes < RETRY_DELAY_MINUTES) {
+        console.log("Retry cooldown active...");
+        continue;
+      }
+
+      console.log("Retrying failed post...");
     }
 
     console.log("Posting day:", campaign.currentDay);
 
-    //Post to platforms
+    // ✅ Post
     const success = await postToPlatforms(campaign, post);
 
-    // Update status
-    if (success) {
+    post.lastAttemptAt = new Date();
 
+    if (success) {
       post.status = "POSTED";
       campaign.currentDay += 1;
 
-      console.log("Post successful. Moving to next day:", campaign.currentDay);
+      console.log("Post successful → Next day:", campaign.currentDay);
 
       if (campaign.currentDay > campaign.totalDays) {
         campaign.status = "COMPLETED";
       }
 
     } else {
-
       post.status = "FAILED";
-      
-      console.log("Post failed. Will retry next cron.");
+      post.retryCount = (post.retryCount || 0) + 1;
 
+      console.log("Post failed. Will retry.");
     }
 
     await post.save();
     await campaign.save();
 
     console.log(`Completed processing for ${campaign._id}`);
-
   }
-  
-
 };
 
 module.exports = runCampaigns;
