@@ -148,13 +148,10 @@ F --> G[Logs & Performance]
 
 ---
 ## Contributors
-
-- Kandula Sai Gana Laxmi Rohith
-- Team Lead | Backend Developer
-- Anchetti Deekshith
-- Frontend | Documentation
-- Goruganti Khowshik
-- UI | Testing 
+Under guidance of Dr. R. Venkat St. Peter’s Engineering College, Hyderabad
+- Kandula Sai Gana Laxmi Rohith - Team Lead | Backend Developer
+- Anchetti Deekshith - Frontend | Documentation
+- Goruganti Khowshik - UI | Testing 
 
 ⸻
 
